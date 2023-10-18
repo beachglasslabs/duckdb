@@ -332,9 +332,8 @@ __nvm
 *.sln
 
 # Zig files
-zig-out/*gs
+zig-out
 zig-cache/*
-*.zig
 
 # .db files
 *.db
