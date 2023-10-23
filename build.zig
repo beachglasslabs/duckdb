@@ -27,7 +27,7 @@ pub fn build(b: *std.build.Builder) void {
         "-std=c++11",
         "-ffunction-sections",
         "-fdata-sections",
-        std.fmt.allocPrint(b.allocator, "-DDUCKDB_VERSION=\"v{}.{}.{}-dev{}\"", .{
+        std.fmt.allocPrint(b.allocator, "-DDUCKDB_VERSION=\"v{}.{}.{}-zig-dev{}\"", .{
             version.major, version.minor, version.patch, 0,
         }) catch unreachable,
         std.fmt.allocPrint(b.allocator, "-DDUCKDB_SOURCE_ID=\"{s}\"", .{
@@ -156,11 +156,11 @@ pub fn build(b: *std.build.Builder) void {
     }) catch unreachable;
 
     // Need to change current directory to make sure std.fs.cwd() calls work
-    std.os.chdir(b.pathFromRoot(".")) catch unreachable;
+    // std.os.chdir(b.pathFromRoot(".")) catch unreachable;
 
     // Generate compile steps by parsing CMakeLists.txt files in src/
     for (find_cmake_files(b, "src")) |path| {
-        const data = std.fs.cwd().readFileAlloc(b.allocator, path, 4 * 1024 * 1024) catch unreachable;
+        const data = b.build_root.handle.readFileAlloc(b.allocator, path, 4 * 1024 * 1024) catch unreachable;
         const args = parse_cmake_call(b, data, "add_library_unity(") orelse continue;
 
         const dirname = std.fs.path.dirname(path) orelse unreachable;
@@ -183,7 +183,7 @@ pub fn build(b: *std.build.Builder) void {
         if (std.mem.indexOf(u8, dirname, "tpce-tool") != null) continue; // only compiled under BUILD_UNITTESTS and BUILD_TPCE
         if (std.mem.indexOf(u8, dirname, "snowball") != null) continue; // only referenced by an extension.
 
-        const data = std.fs.cwd().readFileAlloc(b.allocator, path, 4 * 1024 * 1024) catch unreachable;
+        const data = b.build_root.handle.readFileAlloc(b.allocator, path, 4 * 1024 * 1024) catch unreachable;
         const args = parse_cmake_call(b, data, "add_library(") orelse continue;
 
         const include_path = std.fs.path.join(b.allocator, &[_][]const u8{ dirname, "include" }) catch unreachable;
@@ -231,7 +231,7 @@ pub fn build(b: *std.build.Builder) void {
 }
 
 fn find_cmake_files(b: *std.build.Builder, folder: []const u8) []const []const u8 {
-    var dir = std.fs.cwd().openIterableDir(folder, .{}) catch unreachable;
+    var dir = b.build_root.handle.openIterableDir(folder, .{}) catch unreachable;
     defer dir.close();
 
     var walker = dir.walk(b.allocator) catch unreachable;
