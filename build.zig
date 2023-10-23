@@ -155,6 +155,9 @@ pub fn build(b: *std.build.Builder) void {
         "./third_party/tpce-tool/include",
     }) catch unreachable;
 
+    // Need to change current directory to make sure std.fs.cwd() calls work
+    std.os.chdir(b.pathFromRoot(".")) catch unreachable;
+
     // Generate compile steps by parsing CMakeLists.txt files in src/
     for (find_cmake_files(b, "src")) |path| {
         const data = std.fs.cwd().readFileAlloc(b.allocator, path, 4 * 1024 * 1024) catch unreachable;
