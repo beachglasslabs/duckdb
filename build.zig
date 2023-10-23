@@ -159,26 +159,18 @@ pub fn build(b: *std.build.Builder) void {
     for (find_cmake_files(b, "src")) |path| {
         const data = std.fs.cwd().readFileAlloc(b.allocator, path, 4 * 1024 * 1024) catch unreachable;
         const args = parse_cmake_call(b, data, "add_library_unity(") orelse continue;
-        const dep = b.addStaticLibrary(.{
-            .name = args[0],
-            .target = target,
-            .optimize = optimize,
-        });
 
         const dirname = std.fs.path.dirname(path) orelse unreachable;
-        dep.addIncludePath(.{ .path = dirname });
+        lib.addIncludePath(.{ .path = dirname });
 
         for (include_paths.items) |include| {
-            dep.addIncludePath(.{ .path = include });
+            lib.addIncludePath(.{ .path = include });
         }
 
         for (args[2..]) |source| {
             const src_path = std.fs.path.join(b.allocator, &[_][]const u8{ dirname, source }) catch unreachable;
-            dep.addCSourceFile(.{ .file = .{ .path = src_path }, .flags = cxx_flags.items });
+            lib.addCSourceFile(.{ .file = .{ .path = src_path }, .flags = cxx_flags.items });
         }
-
-        dep.linkLibCpp();
-        lib.linkLibrary(dep);
     }
 
     for (find_cmake_files(b, "third_party")) |path| {
@@ -190,18 +182,13 @@ pub fn build(b: *std.build.Builder) void {
 
         const data = std.fs.cwd().readFileAlloc(b.allocator, path, 4 * 1024 * 1024) catch unreachable;
         const args = parse_cmake_call(b, data, "add_library(") orelse continue;
-        const dep = b.addStaticLibrary(.{
-            .name = args[0],
-            .target = target,
-            .optimize = optimize,
-        });
 
         const include_path = std.fs.path.join(b.allocator, &[_][]const u8{ dirname, "include" }) catch unreachable;
-        dep.addIncludePath(.{ .path = include_path });
-        dep.addIncludePath(.{ .path = dirname });
+        lib.addIncludePath(.{ .path = include_path });
+        lib.addIncludePath(.{ .path = dirname });
 
         for (include_paths.items) |include| {
-            dep.addIncludePath(.{ .path = include });
+            lib.addIncludePath(.{ .path = include });
         }
 
         var sources = std.ArrayList([]const u8).init(b.allocator);
@@ -225,12 +212,11 @@ pub fn build(b: *std.build.Builder) void {
             if (std.mem.endsWith(u8, source, ".inc")) continue; // TODO: handle .inc files
             const src_path = std.fs.path.join(b.allocator, &[_][]const u8{ dirname, source }) catch unreachable;
             const cstd = if (std.mem.endsWith(u8, src_path, ".c")) "" else "-std=c++11";
-            dep.addCSourceFile(.{ .file = .{ .path = src_path }, .flags = &[_][]const u8{cstd} });
+            lib.addCSourceFile(.{ .file = .{ .path = src_path }, .flags = &[_][]const u8{cstd} });
         }
-
-        dep.linkLibCpp();
-        lib.linkLibrary(dep);
     }
+
+    lib.linkLibCpp();
 
     lib.strip = true;
     lib.link_gc_sections = true;
